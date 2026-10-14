@@ -50,13 +50,3 @@ secao4_microexperimentos.md
 
 As comparações usam o mesmo código e as mesmas entradas em OFF e ON. As saídas são gravadas na memória, não impressas no console. Os prints e a interpretação de cada execução estão no relatório.
 
-## Pendências identificadas na revisão
-
-- Confirmar com o professor a composição do grupo: o cabeçalho atual tem cinco nomes, mas o enunciado exige quatro para a graduação.
-- O relatório informa que a organização das previsões ocorreu depois das primeiras execuções; não há comprovação de registro prévio.
-- Registrar a build exata do simulador para a reprodução final.
-- Completar as próximas seções e gerar o PDF de entrega.
-
-Os prints são evidências dos testes, não provas formais de correção para todas as entradas. A penalidade líquida de controle do microexperimento 4 é calculada a partir dos ciclos e dos stalls RAW, não lida de um contador separado de branch stalls.
-
-O enunciado pertence aos seus autores. Este repositório não concede uma licença de redistribuição sobre o material da disciplina.
