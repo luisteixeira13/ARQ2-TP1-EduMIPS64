@@ -13,13 +13,13 @@ Grupo 6:
 
 Neste trabalho, usamos o EduMIPS64 para acompanhar o que acontece com cada instrução dentro do pipeline. Não basta o programa dar o resultado certo: queremos entender quando uma instrução consegue avançar, quando precisa esperar e como essa espera aumenta o número de ciclos. Para isso, comparamos o código com forwarding desligado e ligado e conferimos os resultados nos registradores.
 
-O EduMIPS64 simula parte do conjunto de instruções MIPS64 e foi feito para estudar arquitetura de computadores. Ele permite executar uma instrução por vez e ver os registradores, a memória e os estágios do pipeline. Isso ajuda a entender casos como o nosso `LD` seguido de `DADD`: a soma depende do dado carregado e pode precisar esperar por ele. [1]
+O EduMIPS64 simula parte do conjunto de instruções MIPS64 e foi feito para estudar arquitetura de computadores. Ele permite executar uma instrução por vez e ver os registradores, a memória e os estágios do pipeline. Isso ajuda a entender casos como o nosso `LD` seguido de `DADD`: a soma depende do dado carregado e pode precisar esperar por ele.
 
 ### 1.1 Histórico e tecnologias
 
-O projeto começou em 2006 com estudantes da Universidade de Catania, na Itália. A ideia inicial era criar uma alternativa ao WinMIPS64 que não ficasse limitada ao Windows. Por isso, o simulador foi desenvolvido em Java e depois passou a seguir como um projeto próprio de software livre. [2]
+O projeto começou em 2006 com estudantes da Universidade de Catania, na Itália. A ideia inicial era criar uma alternativa ao WinMIPS64 que não ficasse limitada ao Windows. Por isso, o simulador foi desenvolvido em Java e depois passou a seguir como um projeto próprio de software livre.
 
-A parte que simula a CPU é escrita em Java. Na versão Desktop tradicional, a interface usa Swing. Na versão Web que usamos, a interface usa React e o núcleo Java é compilado para JavaScript, rodando em um Web Worker. Também existe uma distribuição com Electron. O que muda entre essas opções é principalmente a forma de acessar e visualizar o simulador. [3, 4]
+A parte que simula a CPU é escrita em Java. Na versão Desktop tradicional, a interface usa Swing. Na versão Web que usamos, a interface usa React e o núcleo Java é compilado para JavaScript, rodando em um Web Worker. Também existe uma distribuição com Electron. O que muda entre essas opções é principalmente a forma de acessar e visualizar o simulador.
 
 ### 1.2 Desktop e Web
 
@@ -34,7 +34,7 @@ Usamos somente a versão Web. Portanto, as comparações deste relatório são e
 
 ### 1.3 Visualização do pipeline
 
-O painel Pipeline mostra onde as instruções estão naquele ciclo. Já o painel Cycles mostra o caminho que cada uma percorreu ao longo da execução. Por isso, colocamos os prints de Cycles no relatório: neles conseguimos ver as instruções avançando e os pontos marcados como RAW. Quando o programa termina, o Pipeline fica vazio, mas o histórico em Cycles continua disponível. [4]
+O painel Pipeline mostra onde as instruções estão naquele ciclo. Já o painel Cycles mostra o caminho que cada uma percorreu ao longo da execução. Por isso, colocamos os prints de Cycles no relatório: neles conseguimos ver as instruções avançando e os pontos marcados como RAW. Quando o programa termina, o Pipeline fica vazio, mas o histórico em Cycles continua disponível.
 
 | Estágio | Função no pipeline inteiro analisado |
 |---|---|
@@ -52,7 +52,7 @@ Passar por MEM não significa que toda instrução acessa a memória. O `DADD`, 
 
 No MIPS64 temos 32 registradores inteiros, de `R0` a `R31`, e 32 de ponto flutuante, de `F0` a `F31`, todos de 64 bits. O `R0` sempre vale zero. Também existem registradores especiais, como o PC, que indica o endereço da instrução a buscar, e HI e LO. Nos nossos microexperimentos, usamos apenas os registradores inteiros.
 
-Os registradores são de 64 bits, mas as instruções usadas têm 32 bits. São duas coisas diferentes: a instrução diz qual operação fazer e quais registradores usar; o registrador guarda o dado da operação. Então, um `DADD` de 32 bits pode mandar somar valores de 64 bits. A versão Web permite consultar a codificação da instrução depois de carregá-la. [4, 6]
+Os registradores são de 64 bits, mas as instruções usadas têm 32 bits. São duas coisas diferentes: a instrução diz qual operação fazer e quais registradores usar; o registrador guarda o dado da operação. Então, um `DADD` de 32 bits pode mandar somar valores de 64 bits. A versão Web permite consultar a codificação da instrução depois de carregá-la.
 
 ### 2.2 Características RISC e formatos
 
@@ -84,7 +84,7 @@ O opcode ajuda a identificar o que a instrução faz; no tipo R, o campo funct t
 | `.space n` | Reserva `n` bytes para armazenar resultados |
 | `.code` | Inicia a seção de instruções |
 
-`.data`, `.word` e `.code` organizam o arquivo, mas não entram no pipeline como instruções. No EduMIPS64, `.word` reserva 64 bits, então usamos `valor: .word 7` para o dado do load. Para encerrar, usamos `SYSCALL 0` em vez de `HALT`, evitando o aviso de compatibilidade do montador. [5, 6]
+`.data`, `.word` e `.code` organizam o arquivo, mas não entram no pipeline como instruções. No EduMIPS64, `.word` reserva 64 bits, então usamos `valor: .word 7` para o dado do load. Para encerrar, usamos `SYSCALL 0` em vez de `HALT`, evitando o aviso de compatibilidade do montador.
 
 Não há instrução lógica explícita nestes microexperimentos. A comparação de valores realizada por `BNE` faz parte do controle de fluxo, não de uma operação lógica que produza resultado em um registrador.
 
@@ -165,21 +165,6 @@ Proporção de controle = penalidade líquida de controle / CC
 
 No nosso laço, os contadores WAW e structural stalls ficaram em zero. Por isso, tiramos do total os ciclos do pipeline ideal e as esperas RAW para analisar o que sobrou de penalidade de controle, conferindo com o diagrama. Esse número foi calculado por nós, pois o painel Web não mostrou um contador separado de branch stalls. Não usamos essa conta como regra para qualquer pipeline.
 
-## Referências das seções 1 a 3
-
-[1] EduMIPS64. [Documentação e objetivo do simulador](https://edumips64.readthedocs.io/en/latest/).
-
-[2] EduMIPS64. [Página oficial e histórico do projeto](https://edumips.org/).
-
-[3] EduMIPS64. [Repositório oficial e interfaces disponíveis](https://github.com/EduMIPS64/edumips64).
-
-[4] EduMIPS64. [Manual da interface Web](https://edumips64.readthedocs.io/en/latest/user-interface-web.html).
-
-[5] EduMIPS64. [Conjunto de instruções](https://edumips64.readthedocs.io/en/latest/instructions.html).
-
-[6] EduMIPS64. [Formato dos arquivos-fonte](https://edumips64.readthedocs.io/en/latest/source-files-format.html).
-
-[7] EduMIPS64. [Interface Desktop e caminhos de forwarding](https://edumips64.readthedocs.io/en/latest/user-interface-swing.html).
 
 # 4. Parte I: Microexperimentos Obrigatórios
 
