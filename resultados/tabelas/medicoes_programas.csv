@@ -1,7 +1,0 @@
-programa,forwarding,IC,CC,RAW_stalls,WAW_stalls,structural_stalls,CPI
-soma_vetores,OFF,52,94,34,0,0,1.807692
-soma_vetores,ON,52,72,12,0,0,1.384615
-contagem,OFF,43,85,30,0,0,1.976744
-contagem,ON,43,73,18,0,0,1.697674
-matrizes_original,OFF,217,540,308,0,0,2.488479
-matrizes_original,ON,217,262,30,0,0,1.207373

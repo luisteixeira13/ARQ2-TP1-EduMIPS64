@@ -535,3 +535,322 @@ As entradas pequenas facilitam a conferência manual. Esses testes não cobrem t
 Guardamos as medições iniciais em [medicoes_programas.csv](resultados/tabelas/medicoes_programas.csv) para a análise das próximas seções.
 
 
+# 6. Validação funcional
+
+Antes de comparar métricas de desempenho, foram verificadas as saídas dos três programas principais. As entradas são as declaradas nas respectivas seções `.data`, e a verificação foi feita pela comparação entre o resultado matematicamente esperado e os valores gravados na memória pelo EduMIPS64. A versão otimizada do Programa 3 foi testada com as mesmas entradas da versão original.
+
+| Programa | Entrada utilizada | Saída esperada | Saída observada | Evidência |
+|---|---|---|---|---|
+| 1 — Soma de vetores | A = [1,2,3,4,5]; B = [10,20,30,40,50]; N = 5 | C = [11,22,33,44,55] | [11,22,33,44,55] | `resultados/imagens/programa1_on_memoria.jpg` |
+| 2 — Contagem | vetor = [4,7,4,2,4,9]; alvo = 4; N = 6 | resultado = 3 | 3 | `resultados/imagens/programa2_on_memoria.jpg` |
+| 3 — Matrizes original | A = [[1,2,3],[4,5,6]]; B = [[7,8],[9,10],[11,12]] | C = [[58,64],[139,154]] | [[58,64],[139,154]] | `resultados/imagens/programa3_on_memoria.jpg` |
+| 3 — Matrizes otimizado | Mesmas matrizes da versão original | C = [[58,64],[139,154]] | [[58,64],[139,154]], com forwarding OFF e ON e Branch Delay Slot OFF | `resultados/imagens/programa3_otimizado_OFF_memoria.png` e transcrição da memória ON |
+
+No Programa 3, a matriz C está armazenada por linhas em quatro posições consecutivas a partir do endereço `0x60`. Os valores observados em hexadecimal foram `3A`, `40`, `8B` e `9A`, correspondentes a **58, 64, 139 e 154** em decimal. A confirmação da memória da versão otimizada com forwarding ON foi informada a partir da leitura do painel Memory; recomenda-se guardar também a captura correspondente. As capturas disponíveis não constituem uma prova de correção para todas as entradas possíveis: documentam os casos de teste exigidos pelo enunciado.
+
+A validação funcional permite prosseguir para a análise de desempenho sem comparar saídas distintas. Para reproduzir as medições, manteve-se `Branch Delay Slot OFF`, alternando somente `Forwarding OFF/ON` entre as execuções correspondentes.
+
+# 7. Previsão antes da simulação
+
+## 7.1 Critérios para identificar dependências e hazards
+
+O trecho crítico de cada programa foi examinado quanto aos registradores lidos e escritos. A dependência **RAW (Read After Write)** ocorre quando uma instrução precisa ler um valor produzido por instrução anterior. A existência de dependência não implica, por si só, um stall: a penalidade depende dos estágios em que o resultado se torna disponível, de quando será consumido e da presença de forwarding.
+
+**Limitação metodológica:** os Programas 1, 2 e 3 original já tinham sido simulados quando esta continuação foi preparada. Para eles, a identificação abaixo é uma **análise teórica retrospectiva**, não um registro comprovadamente realizado antes das primeiras execuções. Para a versão otimizada, formulou-se uma previsão qualitativa durante a elaboração da continuação e realizou-se uma verificação funcional independente antes da nova execução no EduMIPS64; não houve previsão numérica prévia para todos os contadores de ciclos e stalls.
+
+## 7.2 Programa 1 — Soma de vetores
+
+Trecho crítico:
+
+```asm
+LD   R5, 0(R1)       ; I1: carrega A[i]
+LD   R6, 0(R2)       ; I2: carrega B[i]
+DADD R7, R5, R6      ; I3: soma os dois valores
+SD   R7, 0(R3)       ; I4: grava C[i]
+```
+
+| Produtora | Consumidora | Registrador | Dependência |
+|---|---|---|---|
+| I1 `LD` | I3 `DADD` | R5 | RAW: primeiro operando da soma |
+| I2 `LD` | I3 `DADD` | R6 | RAW: segundo operando; uso logo após load |
+| I3 `DADD` | I4 `SD` | R7 | RAW: resultado gravado na memória |
+
+A expectativa teórica é que o encaminhamento reduza a espera pelos valores, sem necessariamente eliminar toda a penalidade do segundo load, e que o branch de repetição também gere custo de controle. **Observado:** IC = 52 nas duas configurações; CC = 94 e RAW = 34 com OFF, contra CC = 72 e RAW = 12 com ON; CPI = 1,81 e 1,38, respectivamente. O ganho com forwarding foi de `94/72 = 1,31×`.
+
+## 7.3 Programa 2 — Contagem de ocorrências
+
+Trecho crítico:
+
+```asm
+LD    R5, 0(R1)          ; I1: lê elemento
+BNE   R5, R3, Proximo    ; I2: compara com alvo
+DADDI R6, R6, 1         ; I3: incrementa se igual
+```
+
+A dependência RAW de **I1→I2 em R5** é importante porque o branch usa o dado lido para decidir o fluxo. Há também dependência entre a atualização do contador de elementos em `R2` e o `BNE R2,R0,Loop` no fim do laço. A expectativa teórica é haver redução dos stalls com forwarding, mas persistirem esperas associadas à leitura de memória e ao controle.
+
+**Observado:** IC = 43 em ambos os casos; CC = 85 e RAW = 30 com OFF, contra CC = 73 e RAW = 18 com ON; CPI = 1,98 e 1,70, respectivamente. O ganho com forwarding foi de `85/73 = 1,16×`.
+
+## 7.4 Programa 3 — Multiplicação de matrizes: original e otimizado
+
+Na versão original, o laço `Produto` recalcula endereços de A e B para cada multiplicação, usando operações aritméticas e deslocamentos antes dos loads. O trecho de consumo de operandos é:
+
+```asm
+LD   R9, 0(R7)         ; carrega A[i][k]
+LD   R10, 0(R8)        ; carrega B[k][j]
+DMUL R11, R9, R10      ; depende dos dois loads
+DADD R12, R12, R11     ; depende da multiplicação
+```
+
+Existem dependências RAW **LD→DMUL em R9/R10** e **DMUL→DADD em R11**. Há ainda dependências de endereço e entre incrementos dos índices e desvios condicionais. O objetivo da versão otimizada foi reduzir cálculos redundantes de endereços e colocar trabalho útil entre as instruções produtoras e consumidoras.
+
+O laço otimizado executa:
+
+```asm
+Produto:
+    LD    R9, 0(R7)          ; I1
+    LD    R10, 0(R8)         ; I2
+    DADDI R7, R7, 8         ; I3
+    DADDI R8, R8, 16        ; I4
+    DMUL  R11, R9, R10      ; I5
+    DADDI R6, R6, 1         ; I6
+    DADD  R12, R12, R11     ; I7
+    BNE   R6, R15, Produto  ; I8
+```
+
+**Previsão qualitativa:** as instruções I3 e I4, que atualizam os ponteiros para leituras futuras, ocupam o intervalo entre os loads e o uso em I5; I6 ocupa o intervalo entre multiplicação e acumulação. Isso tende a diminuir as esperas RAW, sobretudo com forwarding, embora os desvios do laço permaneçam necessários. O resultado matemático deveria permanecer C = [[58,64],[139,154]]. A contagem independente de instruções da nova implementação indicou 151 instruções dinâmicas, valor posteriormente confirmado no simulador.
+
+| Métrica | Original OFF | Otimizado OFF | Original ON | Otimizado ON |
+|---|---:|---:|---:|---:|
+| IC | 217 | 151 | 217 | 151 |
+| CC | 540 | 214 | 262 | 172 |
+| RAW stalls | 308 | 48 | 30 | 6 |
+| WAW stalls | 0 | 0 | 0 | 0 |
+| Structural stalls | 0 | 0 | 0 | 0 |
+| CPI | 2,49 | 1,42 | 1,21 | 1,14 |
+
+**Diferença entre a hipótese e o observado:** o sentido da melhoria foi confirmado, mas as quantidades exatas de ciclos e stalls não haviam sido previstas. A redução da versão original para a otimizada foi de 540 para 214 ciclos com OFF (speedup = **2,52×**) e de 262 para 172 com ON (speedup = **1,52×**). A versão otimizada manteve o resultado correto com ambos os estados de forwarding, desde que `Branch Delay Slot` estivesse desabilitado. Ao habilitar essa última opção, a execução de instruções situadas após branches afetou o fluxo de controle; por isso, esse cenário não é comparado com as medições principais.
+
+Nos prints do EduMIPS64 Web, o painel Stats apresentou os contadores **RAW, WAW e structural stalls**, mas não um contador independente de branch stalls. Assim, eventuais penalidades líquidas de controle devem ser identificadas como **inferência**, não como medição direta.
+
+# 8. Análise detalhada do pipeline
+
+## 8.1 Escolha do trecho e configuração
+
+O trecho analisado contém as oito instruções consecutivas **I1–I8** do laço `Produto` do Programa 3 otimizado, apresentadas na seção 7.4. Foi usada a execução com **Forwarding ON**, **Branch Delay Slot OFF**, 151 instruções dinâmicas, 172 ciclos e seis stalls RAW no programa completo. As figuras abaixo mostram a **primeira iteração** do trecho em dois recortes do painel Cycles.
+
+![Primeira parte do diagrama de ciclos do trecho Produto](resultados/imagens/programa3_otimizado_ON_ciclos_inicio.png)
+
+*Figura 8.1 — Entrada do laço Produto no pipeline, com a primeira busca da instrução I1 no ciclo 16.*
+
+![Continuação da primeira iteração e início das seguintes](resultados/imagens/programa3_otimizado_ON_ciclos_continuacao.png)
+
+*Figura 8.2 — Conclusão do trecho, desvio tomado e início da próxima iteração.*
+
+## 8.2 Ocupação dos estágios IF, ID, EX, MEM e WB
+
+| Instrução | IF | ID | EX | MEM | WB |
+|---|---:|---:|---:|---:|---:|
+| I1 `LD R9,0(R7)` | 16 | 17 | 18 | 19 | 20 |
+| I2 `LD R10,0(R8)` | 17 | 18 | 19 | 20 | 21 |
+| I3 `DADDI R7,R7,8` | 18 | 19 | 20 | 21 | 22 |
+| I4 `DADDI R8,R8,16` | 19 | 20 | 21 | 22 | 23 |
+| I5 `DMUL R11,R9,R10` | 20 | 21 | 22 | 23 | 24 |
+| I6 `DADDI R6,R6,1` | 21 | 22 | 23 | 24 | 25 |
+| I7 `DADD R12,R12,R11` | 22 | 23 | 24 | 25 | 26 |
+| I8 `BNE R6,R15,Produto` | 23 | 24 | 25 | 26 | 27 |
+
+Tabela ciclo a ciclo (célula vazia significa que a instrução ainda não entrou ou já saiu do pipeline):
+
+| Ciclo | I1 | I2 | I3 | I4 | I5 | I6 | I7 | I8 |
+|---:|---|---|---|---|---|---|---|---|
+| 16 | IF | | | | | | | |
+| 17 | ID | IF | | | | | | |
+| 18 | EX | ID | IF | | | | | |
+| 19 | MEM | EX | ID | IF | | | | |
+| 20 | WB | MEM | EX | ID | IF | | | |
+| 21 | | WB | MEM | EX | ID | IF | | |
+| 22 | | | WB | MEM | EX | ID | IF | |
+| 23 | | | | WB | MEM | EX | ID | IF |
+| 24 | | | | | WB | MEM | EX | ID |
+| 25 | | | | | | WB | MEM | EX |
+| 26 | | | | | | | WB | MEM |
+| 27 | | | | | | | | WB |
+
+A tabela foi transcrita das figuras 8.1 e 8.2. Não foram observadas células `RAW` nem bolhas de dados **nessa primeira ocorrência específica das oito instruções**. Isso **não contradiz** os seis stalls RAW registrados pelo painel Stats na execução completa; essas esperas aparecem em outros pontos ou iterações do programa.
+
+## 8.3 Dependências, forwarding e bolhas
+
+1. **I1→I5 em R9 e I2→I5 em R10 (RAW):** os operandos são carregados pelos dois `LD`, mas as instruções I3 e I4 executam atualizações úteis de ponteiros antes da multiplicação. Na captura, I1 está em MEM no ciclo 19 e I2 em MEM no ciclo 20; I5 só chega a EX no ciclo 22. O resultado de memória está disponível a tempo, sem stall RAW visível entre os loads e a multiplicação nesse trecho.
+2. **I5→I7 em R11 (RAW):** a multiplicação está em EX no ciclo 22, enquanto I7 só chega a EX no ciclo 24. A instrução I6, independente do produto, foi colocada entre elas, criando o intervalo que permite aproveitar o valor produzido com forwarding, sem bolha visível nessa primeira ocorrência.
+3. **I6→I8 em R6 (RAW):** o branch precisa do índice `k` atualizado. I6 passa por EX no ciclo 23; I8 está em ID no ciclo 24 e EX no ciclo 25. A captura mostra avanço sem marcação RAW nesse ponto específico.
+
+**Controle:** na figura 8.2, a instrução sequencial `SD R12,0(R3)` aparece em **IF no ciclo 24**, mas não prossegue para os demais estágios quando o desvio é tomado. O `LD R9,0(R7)` da próxima iteração começa a ser buscado no **ciclo 25**, evidenciando o redirecionamento do fluxo. A penalidade de controle não deve ser confundida com um stall RAW. Essa observação corresponde à iteração capturada e não substitui a contagem global dos desvios.
+
+As medições do programa otimizado foram **151 instruções, 214 ciclos e 48 stalls RAW com forwarding OFF**, e **151 instruções, 172 ciclos e seis stalls RAW com forwarding ON**. Logo, os 42 ciclos a menos com ON coincidiram com a redução de 42 stalls RAW. Um cálculo residual, sob o modelo `IC+4` usado anteriormente e sem outros tipos de stall contados, dá `CC−IC−4−RAW = 11` ciclos em ambos os casos; esse valor é uma **estimativa líquida de controle**, e não um contador exibido em Stats.
+
+# 9. Grafo de dependências
+
+O grafo da figura 9.1 foi construído a partir do mesmo trecho I1–I8 estudado na seção 8. As **setas contínuas** são dependências RAW verdadeiras dentro da iteração; as **setas pontilhadas** registram restrições WAR de leitura antes de atualização de ponteiros; as **setas tracejadas** representam dependências RAW transportadas para a iteração seguinte.
+
+![Grafo de dependências do laço Produto](resultados/imagens/grafo_dependencias_programa3.png)
+
+*Figura 9.1 — Dependências do trecho crítico do Programa 3 otimizado. Fonte editável em `resultados/imagens/grafo_dependencias_programa3.dot`.*
+
+## 9.1 Dependências verdadeiras
+
+- **I1→I5 (R9):** a multiplicação consome o valor carregado de A.
+- **I2→I5 (R10):** a multiplicação consome o valor carregado de B.
+- **I5→I7 (R11):** a soma acumulada consome o produto da multiplicação.
+- **I6→I8 (R6):** o desvio consome o índice `k` incrementado.
+- **Entre iterações:** a atualização de R7 em I3 alimenta a leitura de A no próximo I1; a atualização de R8 em I4 alimenta a próxima leitura de B no próximo I2; e o acumulador escrito por I7 alimenta a próxima execução de I7 enquanto o laço continua.
+
+## 9.2 Independência e oportunidade de ILP
+
+I3 e I4 não precisam dos **valores carregados** por I1 e I2: seus operandos são os ponteiros R7 e R8. Por isso, podem ocupar o intervalo até I5 precisar dos resultados dos loads. De modo semelhante, I6 não precisa do produto produzido por I5 e pode ser executada antes de I7. Essa distribuição de instruções independentes ajuda a sobrepor diferentes estágios e a evitar esperas, explorando paralelismo em nível de instrução (ILP) por **escalonamento de instruções**.
+
+**Restrição de semântica:** isso não significa que todas essas instruções possam trocar de posição livremente. I1 precisa ler o endereço antigo de R7 antes de I3 modificá-lo, e I2 precisa ler o endereço antigo de R8 antes de I4 modificá-lo. O grafo identifica essas restrições de ordenação **WAR (antidependências)**; elas não foram observadas como stalls WAR no simulador, mas precisam ser preservadas numa possível nova reorganização. A soma também deve preservar o encadeamento do acumulador R12 entre as iterações. Mudar essas ordens poderia alterar os elementos multiplicados e, portanto, a matriz final.
+
+Conclui-se que a otimização não eliminou as dependências necessárias do algoritmo; ela reduziu o recálculo de endereços e posicionou operações independentes entre as dependências RAW. Em consequência, as medições registraram menor contagem de instruções e menos stalls, preservando a saída funcional.
+
+# 10. Otimização por reordenação de instruções
+
+## 10.1 Objetivo e condições de comparação
+
+Conforme exigido no enunciado, o **Programa 3 — multiplicação de matrizes** foi implementado em duas versões: [original](programas/programa3_matrizes_original.s) e [otimizada](programas/programa3_matrizes_otimizado.s). A otimização manteve o mesmo algoritmo de multiplicação, as mesmas entradas e dimensões (**A com 2×3, B com 3×2 e C com 2×2**), alterando apenas a forma de calcular os endereços e de organizar instruções independentes. Portanto, a comparação não decorre de modificar o problema ou reduzir artificialmente o trabalho matemático: ambas as versões realizam as mesmas **12 multiplicações e acumulações** necessárias para os quatro elementos de C.
+
+Os testes foram realizados no **EduMIPS64 Web**, sempre com **Branch Delay Slot desabilitado**, nas duas configurações: **Forwarding OFF** e **Forwarding ON**. Entre versões comparadas, mantiveram-se os dados de entrada e os demais ajustes experimentais usados nas seções anteriores. As métricas IC, CC, RAW, WAW e structural stalls foram extraídas do painel **Stats**; o CPI foi obtido pela divisão de CC por IC. O painel utilizado **não exibiu um contador separado de branch stalls**, razão pela qual essa métrica é indicada como **não disponível**, sem substituí-la silenciosamente por zero.
+
+## 10.2 Transformações efetuadas no código
+
+A versão original recalculava, em cada iteração interna `k`, os endereços de `A[i][k]` e `B[k][j]`, combinando multiplicação de índices, deslocamentos e adições. O trecho original incluía:
+
+```asm
+Produto:
+    DMUL R7, R4, R15   ; i*3
+    DADD R7, R7, R6    ; i*3 + k
+    DSLL R7, R7, 3     ; indice em bytes
+    DADD R7, R1, R7    ; endereco de A[i][k]
+    LD   R9, 0(R7)
+    DSLL R8, R6, 1     ; k*2
+    DADD R8, R8, R5    ; k*2 + j
+    DSLL R8, R8, 3
+    DADD R8, R2, R8    ; endereco de B[k][j]
+    LD   R10, 0(R8)
+    DMUL R11, R9, R10
+    DADD R12, R12, R11
+    DADDI R6, R6, 1
+    BNE R6, R15, Produto
+```
+
+Na versão otimizada, o início da linha de A é calculado **uma vez por linha** e mantido em `R13`; no início de cada coluna `j`, `R7` recebe essa base. A posição inicial de B é calculada para a coluna atual, e os dois ponteiros são incrementados dentro do laço: **R7 += 8 bytes** (próximo elemento da mesma linha de A) e **R8 += 16 bytes** (próxima linha de B, que tem duas colunas de 8 bytes). O ponteiro da saída C (`R3`) também é incrementado em oito bytes após cada gravação, evitando novo cálculo do índice de C.
+
+O novo laço central ficou:
+
+```asm
+Produto:
+    LD    R9, 0(R7)           ; carrega A[i][k]
+    LD    R10, 0(R8)          ; carrega B[k][j]
+    DADDI R7, R7, 8          ; prepara proximo endereco de A
+    DADDI R8, R8, 16         ; prepara proximo endereco de B
+    DMUL  R11, R9, R10       ; multiplica os dois dados lidos
+    DADDI R6, R6, 1          ; avanca k sem depender do produto
+    DADD  R12, R12, R11      ; acumula a multiplicacao
+    BNE   R6, R15, Produto   ; repete ate k = 3
+```
+
+As instruções de incremento de R7 e R8 são **independentes dos valores carregados** em R9 e R10, embora devam permanecer **depois dos respectivos loads**, pois a leitura precisa utilizar o endereço antigo. Elas preenchem parte do intervalo antes do consumo pela `DMUL`. O incremento de R6 foi posicionado entre a `DMUL` e a `DADD`, que consome seu resultado. Essas escolhas exploram **paralelismo em nível de instrução (ILP)** sem violar as dependências RAW e as restrições de reordenação descritas na seção 9.
+
+As mudanças são, portanto, uma combinação de **reorganização de instruções independentes, redução de recálculo de endereços, eliminação de operações redundantes e utilização de ponteiros/registradores**. Não houve alteração de entradas, dimensão das matrizes ou resultado desejado.
+
+## 10.3 Verificação da equivalência funcional
+
+Nas quatro execuções comparadas (original OFF/ON e otimizada OFF/ON), a matriz resultado foi:
+
+\[
+C=\begin{bmatrix}58 & 64\\139 & 154\end{bmatrix}
+\]
+
+O resultado é verificável no painel **Memory**, no endereço inicial `0x60`, pelas quatro palavras de 64 bits que contêm os valores hexadecimais `3A`, `40`, `8B` e `9A`, equivalentes a 58, 64, 139 e 154 em decimal. A versão otimizada com forwarding OFF teve a memória fotografada; com forwarding ON, a sequência completa foi conferida no painel e transcrita, porém **a captura de Memory ON ainda deve ser arquivada** se o grupo desejar evidência visual separada dessa configuração.
+
+A equivalência foi verificada para a **entrada de teste utilizada**, não para todas as dimensões ou valores possíveis. Tanto a versão original quanto a otimizada usam dimensões fixas 2×3 e 3×2.
+
+![Memória da versão original com forwarding ON](resultados/imagens/programa3_on_memoria.jpg)
+
+*Figura 10.1 — Resultado da multiplicação na versão original (valores em hexadecimal).* 
+
+![Memória da versão otimizada com forwarding OFF](resultados/imagens/programa3_otimizado_OFF_memoria.png)
+
+*Figura 10.2 — Resultado idêntico na versão otimizada.*
+
+## 10.4 Comparação quantitativa
+
+A Tabela 10.1 reúne as quatro medições completas e verificadas no EduMIPS64. **Branch stalls** não foi exibido separadamente no painel usado; por isso a coluna está identificada como `N/D` (não disponível), e não como zero.
+
+| Versão | Forwarding | IC | CC | RAW stalls | WAW stalls | Structural stalls | Branch stalls (painel) | CPI |
+|---|---|---:|---:|---:|---:|---:|---|---:|
+| Original | OFF | 217 | 540 | 308 | 0 | 0 | N/D | 2,49 |
+| Original | ON | 217 | 262 | 30 | 0 | 0 | N/D | 1,21 |
+| Otimizada | OFF | 151 | 214 | 48 | 0 | 0 | N/D | 1,42 |
+| Otimizada | ON | 151 | 172 | 6 | 0 | 0 | N/D | 1,14 |
+
+*Tabela 10.1 — Comparação medida nas mesmas condições de entrada. Os valores arredondados de CPI foram calculados como CC/IC; medições completas encontram-se em `resultados/tabelas/medicoes_programas_auditadas.csv` e em `resultados/tabelas/comparacao_programa3_secao10.csv`.*
+
+![Comparação das versões pela contagem de ciclos](resultados/imagens/comparacao_ciclos_programa3.png)
+
+*Figura 10.3 — Ciclos da versão original e da otimizada, com forwarding OFF e ON.*
+
+A redução no número de instruções executadas, comum às duas configurações de forwarding, foi de **217 para 151**, isto é, **66 instruções a menos**, ou **30,4%**. Essa redução decorre principalmente da substituição de cálculos repetitivos de endereços por atualizações de ponteiros.
+
+O ganho de desempenho é calculado em ciclos, assumindo o mesmo período de clock em cada comparação:
+
+\[
+\mathrm{Speedup}_{OFF}=\frac{CC_{original,OFF}}{CC_{otimizada,OFF}}=\frac{540}{214}\approx\mathbf{2{,}52}\times
+\]
+
+\[
+\mathrm{Speedup}_{ON}=\frac{CC_{original,ON}}{CC_{otimizada,ON}}=\frac{262}{172}\approx\mathbf{1{,}52}\times
+\]
+
+| Configuração | Ciclos original → otimizada | Redução de CC | RAW stalls original → otimizada | Redução de RAW | Speedup |
+|---|---|---:|---|---:|---:|
+| Forwarding OFF | 540 → 214 | **60,4%** | 308 → 48 | **84,4%** | **2,52×** |
+| Forwarding ON | 262 → 172 | **34,4%** | 30 → 6 | **80,0%** | **1,52×** |
+
+*Tabela 10.2 — Ganhos da otimização mantendo fixo o estado do forwarding.*
+
+O CPI diminuiu de **2,49 para 1,42** sem forwarding e de **1,21 para 1,14** com forwarding. Entretanto, o CPI isoladamente não caracteriza todo o ganho, pois tanto o número de instruções (IC) quanto o número de ciclos (CC) mudaram. Por isso, o speedup é calculado pelos ciclos, não pela razão dos CPIs.
+
+## 10.5 Interpretação dos stalls e dos desvios
+
+A versão original possui uma cadeia maior de operações de cálculo de endereços dentro do laço, criando dependências entre valores de índices, deslocamentos, endereços, loads, multiplicação e soma. A versão otimizada evita várias dessas operações a cada iteração e intercala instruções que não dependem dos operandos da multiplicação. Essa diferença explica a diminuição simultânea de **IC** e **RAW stalls**.
+
+Dentro das condições deste experimento, a comparação dos ciclos também é consistente com a seguinte decomposição do modelo de cinco estágios apresentado na seção 3:
+
+\[
+CC = (IC+4) + RAW\;stalls + P_{controle,\,liquida}
+\]
+
+| Execução | Cálculo do resíduo de controle | Resíduo inferido |
+|---|---|---:|
+| Original OFF | 540 − (217 + 4) − 308 | 11 ciclos |
+| Original ON | 262 − (217 + 4) − 30 | 11 ciclos |
+| Otimizada OFF | 214 − (151 + 4) − 48 | 11 ciclos |
+| Otimizada ON | 172 − (151 + 4) − 6 | 11 ciclos |
+
+Esses **11 ciclos são uma penalidade líquida de controle inferida**, **não um valor lido de um contador de branch stalls**. No caso estudado, o resultado é compatível com 11 desvios tomados nos laços aninhados, mantendo-se a mesma sequência funcional de controle nas duas versões. A inferência depende das hipóteses sobre o pipeline e sobre quais esperas já estão incluídas nos contadores; não deve ser tratada como fórmula universal de processadores MIPS64.
+
+Essa decomposição ajuda a explicar os ganhos de forma concreta. Com forwarding OFF, a diferença total de **326 ciclos** entre original e otimizada corresponde aos **66 comandos a menos e 260 stalls RAW a menos**; com forwarding ON, os **90 ciclos** de redução correspondem a **66 instruções e 24 stalls RAW** eliminados. O restante inferido associado ao controle manteve-se constante. O valor global de RAW stalls, portanto, é indispensável para explicar o desempenho — não basta afirmar genericamente que o código “ficou mais rápido”.
+
+## 10.6 Síntese da otimização
+
+O Programa 3 otimizado preservou a saída C = [[58,64],[139,154]] para a entrada testada e reduziu o custo de execução em ambas as configurações. A otimização explorou duas oportunidades complementares: **reduzir trabalho redundante** (sobretudo cálculos de endereços) e **preencher intervalos de dependência com trabalho útil** (incrementos de ponteiros e do índice `k`). Isso reduziu o número de instruções de 217 para 151, diminuiu os stalls RAW e produziu **speedup de 2,52× com forwarding OFF e 1,52× com forwarding ON**, sem modificar o problema matemático.
+
+Com isso, a etapa de otimização da seção 10 está concluída para o caso de teste medido. A análise consolidada de outros programas e a experimentação com tamanhos de entrada diferentes serão desenvolvidas nas seções 11 e 12. A integração e a discussão final dos resultados ficarão nas seções 13 e 14.
+
+**Evidências da comparação:**
+
+- Original OFF: ![Stats original OFF](resultados/imagens/programa3_original_OFF_stats.png)
+- Original ON: ![Stats original ON](resultados/imagens/programa3_original_ON_stats.png)
+- Otimizada OFF: ![Stats otimizada OFF](resultados/imagens/programa3_otimizado_OFF_stats.png)
+- Otimizada ON: ![Stats otimizada ON](resultados/imagens/programa3_otimizado_ON_stats.png)
