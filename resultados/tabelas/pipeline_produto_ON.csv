@@ -1,0 +1,13 @@
+Ciclo,"I1 LD R9,0(R7)","I2 LD R10,0(R8)","I3 DADDI R7,R7,8","I4 DADDI R8,R8,16","I5 DMUL R11,R9,R10","I6 DADDI R6,R6,1","I7 DADD R12,R12,R11","I8 BNE R6,R15,Produto",Observacao
+16,IF,,,,,,,,Primeiro LD entra em IF
+17,ID,IF,,,,,,,
+18,EX,ID,IF,,,,,,
+19,MEM,EX,ID,IF,,,,,
+20,WB,MEM,EX,ID,IF,,,,I1 chega a WB; I2 em MEM
+21,,WB,MEM,EX,ID,IF,,,
+22,,,WB,MEM,EX,ID,IF,,DMUL em EX
+23,,,,WB,MEM,EX,ID,IF,DADD em ID; BNE em IF
+24,,,,,WB,MEM,EX,ID,BNE em ID; SD sequencial é buscado e descartado
+25,,,,,,WB,MEM,EX,BNE em EX; começa a busca de LD da próxima iteração
+26,,,,,,,WB,MEM,
+27,,,,,,,,WB,BNE chega a WB

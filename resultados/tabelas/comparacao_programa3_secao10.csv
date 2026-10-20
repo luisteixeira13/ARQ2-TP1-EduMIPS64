@@ -1,0 +1,5 @@
+programa,versao,forwarding,branch_delay_slot,IC,CC,RAW_stalls,WAW_stalls,structural_stalls,branch_stalls_painel,CPI,controle_liquido_inferido,saida_validada,evidencia_stats
+programa3_matrizes,original,OFF,OFF,217,540,308,0,0,N/D,2.488479,11,sim,resultados/imagens/programa3_original_OFF_stats.png
+programa3_matrizes,original,ON,OFF,217,262,30,0,0,N/D,1.207373,11,sim,resultados/imagens/programa3_original_ON_stats.png
+programa3_matrizes,otimizada,OFF,OFF,151,214,48,0,0,N/D,1.417219,11,sim,resultados/imagens/programa3_otimizado_OFF_stats.png
+programa3_matrizes,otimizada,ON,OFF,151,172,6,0,0,N/D,1.139073,11,sim,resultados/imagens/programa3_otimizado_ON_stats.png

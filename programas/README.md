@@ -14,6 +14,7 @@ Abra o EduMIPS64 Web em https://web.edumips.org/.
 | `programa1_soma_vetores.s` | `[11,22,33,44,55]` | C, endereços 0x50 a 0x70 |
 | `programa2_contagem.s` | `3` | resultado em 0x40; também R6 |
 | `programa3_matrizes_original.s` | `[[58,64],[139,154]]` | C, endereços 0x60 a 0x78 |
+| `programa3_matrizes_otimizado.s` | `[[58,64],[139,154]]` | C, endereços 0x60 a 0x78 |
 
 Memory mostra valores em hexadecimal:
 
@@ -22,4 +23,4 @@ Memory mostra valores em hexadecimal:
 
 Cada elemento ocupa oito bytes. Na soma e na contagem, N deve ser não negativo e compatível com o espaço reservado. O programa 3 tem dimensões fixas: A 2x3 e B 3x2.
 
-O programa 3 é a versão original. A versão otimizada ainda não faz parte desta etapa.
+O Programa 3 tem as versões original e otimizada. O relatório compara as duas na seção 10, em Forwarding OFF e ON, mantendo Branch Delay Slot desligado.

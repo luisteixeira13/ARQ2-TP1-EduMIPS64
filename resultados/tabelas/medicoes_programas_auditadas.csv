@@ -1,0 +1,9 @@
+programa,versao,forwarding,IC,CC,RAW_stalls,WAW_stalls,structural_stalls,CPI_calculado,print_stats
+programa1_soma_vetores,original,OFF,52,94,34,0,0,1.807692,resultados/imagens/programa1_original_OFF_stats.png
+programa1_soma_vetores,original,ON,52,72,12,0,0,1.384615,resultados/imagens/programa1_original_ON_stats.png
+programa2_contagem,original,OFF,43,85,30,0,0,1.976744,resultados/imagens/programa2_original_OFF_stats.png
+programa2_contagem,original,ON,43,73,18,0,0,1.697674,resultados/imagens/programa2_original_ON_stats.png
+programa3_matrizes,original,OFF,217,540,308,0,0,2.488479,resultados/imagens/programa3_original_OFF_stats.png
+programa3_matrizes,original,ON,217,262,30,0,0,1.207373,resultados/imagens/programa3_original_ON_stats.png
+programa3_matrizes,otimizada,OFF,151,214,48,0,0,1.417219,resultados/imagens/programa3_otimizado_OFF_stats.png
+programa3_matrizes,otimizada,ON,151,172,6,0,0,1.139073,resultados/imagens/programa3_otimizado_ON_stats.png
