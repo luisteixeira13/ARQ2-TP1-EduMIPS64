@@ -1,0 +1,5 @@
+Origem,Elemento,Endereco_hex,Valor_hex,Valor_decimal,Status
+Programa3 otimizado,C[0][0],0x60,0x3A,58,"Esperado; confirmado em OFF, falta captura ON da região C"
+Programa3 otimizado,C[0][1],0x68,0x40,64,"Esperado; confirmado em OFF, falta captura ON da região C"
+Programa3 otimizado,C[1][0],0x70,0x8B,139,"Esperado; confirmado em OFF, falta captura ON da região C"
+Programa3 otimizado,C[1][1],0x78,0x9A,154,"Esperado; confirmado em OFF, falta captura ON da região C"

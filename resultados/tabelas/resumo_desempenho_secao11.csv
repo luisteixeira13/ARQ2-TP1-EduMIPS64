@@ -1,0 +1,19 @@
+Experimento,Versao,Forwarding,IC,CC,RAW_stalls_painel,WAW_stalls_painel,structural_stalls_painel,Branch_stalls_painel,Residuo_controle_inferido,CPI_calculado,Origem
+4.1 Pipeline ideal,-,OFF,5,9,0,0,0,N/D,0,1.800000,secao4_microexperimentos.md / capturas
+4.1 Pipeline ideal,-,ON,5,9,0,0,0,N/D,0,1.800000,secao4_microexperimentos.md / capturas
+4.2 RAW,-,OFF,5,15,6,0,0,N/D,0,3.000000,secao4_microexperimentos.md / capturas
+4.2 RAW,-,ON,5,9,0,0,0,N/D,0,1.800000,secao4_microexperimentos.md / capturas
+4.3 Load-use original,-,OFF,4,12,4,0,0,N/D,0,3.000000,secao4_microexperimentos.md / capturas
+4.3 Load-use original,-,ON,4,9,1,0,0,N/D,0,2.250000,secao4_microexperimentos.md / capturas
+4.3 Load-use reordenado,-,OFF,5,12,3,0,0,N/D,0,2.400000,secao4_microexperimentos.md / capturas
+4.3 Load-use reordenado,-,ON,5,9,0,0,0,N/D,0,1.800000,secao4_microexperimentos.md / capturas
+4.4 Desvio,-,OFF,33,68,22,0,0,N/D,9,2.060606,secao4_microexperimentos.md / capturas
+4.4 Desvio,-,ON,33,56,10,0,0,N/D,9,1.696970,secao4_microexperimentos.md / capturas
+P1 Soma de vetores,Original,OFF,52,94,34,0,0,N/D,4,1.807692,medicoes_programas_auditadas.csv / capturas
+P1 Soma de vetores,Original,ON,52,72,12,0,0,N/D,4,1.384615,medicoes_programas_auditadas.csv / capturas
+P2 Contagem,Original,OFF,43,85,30,0,0,N/D,8,1.976744,medicoes_programas_auditadas.csv / capturas
+P2 Contagem,Original,ON,43,73,18,0,0,N/D,8,1.697674,medicoes_programas_auditadas.csv / capturas
+P3 Matrizes,Original,OFF,217,540,308,0,0,N/D,11,2.488479,medicoes_programas_auditadas.csv / capturas
+P3 Matrizes,Original,ON,217,262,30,0,0,N/D,11,1.207373,medicoes_programas_auditadas.csv / capturas
+P3 Matrizes,Otimizada,OFF,151,214,48,0,0,N/D,11,1.417219,medicoes_programas_auditadas.csv / capturas
+P3 Matrizes,Otimizada,ON,151,172,6,0,0,N/D,11,1.139073,medicoes_programas_auditadas.csv / capturas

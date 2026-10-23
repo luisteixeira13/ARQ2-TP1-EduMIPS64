@@ -9,6 +9,8 @@ Grupo 6:
 > Filipe Rezende Silva
 > Luis Felipe Costa Teixeira
 
+**Composição do grupo:** cinco integrantes, conforme exceção autorizada pelo professor para este grupo. A relação de nomes foi preservada sem alterações.
+
 ## 1. Introdução e construção do simulador
 
 Neste trabalho, usamos o EduMIPS64 para acompanhar o que acontece com cada instrução dentro do pipeline. Não basta o programa dar o resultado certo: queremos entender quando uma instrução consegue avançar, quando precisa esperar e como essa espera aumenta o número de ciclos. Para isso, comparamos o código com forwarding desligado e ligado e conferimos os resultados nos registradores.
@@ -461,7 +463,7 @@ No endereço `0x40`, `resultado` ficou com 3. `R6` também mostra 3. A coluna Co
 
 **Arquivo:** [programa3_matrizes_original.s](programas/programa3_matrizes_original.s)
 
-Escolhemos a multiplicação de matrizes como o programa mais completo. Ele tem três laços, calcula endereços, lê operandos, multiplica, acumula e grava a resposta. Esta é a versão original; a versão otimizada será feita na etapa de otimização do trabalho.
+Escolhemos a multiplicação de matrizes como o programa mais completo. Ele tem três laços, calcula endereços, lê operandos, multiplica, acumula e grava a resposta. Esta é a versão original; a versão otimizada é apresentada na seção 10.
 
 A tem duas linhas e três colunas, B tem três linhas e duas colunas e C terá duas linhas e duas colunas:
 
@@ -528,11 +530,11 @@ Os arquivos ficam em `programas`, com `.data` para entradas e saídas e `.code` 
 | Contagem | Load e incremento do contador | Comparação com o alvo e branch do laço | `3` |
 | Matrizes | Endereços, loads, produto, soma e store | Três laços com i, j e k | `[[58,64],[139,154]]` |
 
-Todos carregaram sem erros e terminaram com a saída esperada com forwarding OFF e ON. Não inserimos NOPs para criar esperas: os hazards vêm das operações dos algoritmos. As matrizes ainda não foram reordenadas, pois esse código será a referência da otimização.
+Todos carregaram sem erros e terminaram com a saída esperada com forwarding OFF e ON. Não inserimos NOPs para criar esperas: os hazards vêm das operações dos algoritmos. O arquivo `programa3_matrizes_original.s` foi mantido como referência; a versão otimizada fica em arquivo separado e é comparada na seção 10.
 
 As entradas pequenas facilitam a conferência manual. Esses testes não cobrem todos os casos nem valores que provoquem overflow. Na soma e na contagem, N deve ser não negativo e não ultrapassar o espaço reservado. As matrizes têm dimensões fixas 2×3 e 3×2.
 
-Guardamos as medições iniciais em [medicoes_programas.csv](resultados/tabelas/medicoes_programas.csv) para a análise das próximas seções.
+As medições dos programas estão em [medicoes_programas_auditadas.csv](resultados/tabelas/medicoes_programas_auditadas.csv), confrontadas com as capturas do painel Stats.
 
 
 # 6. Validação funcional
@@ -546,7 +548,7 @@ Antes de comparar métricas de desempenho, foram verificadas as saídas dos trê
 | 3 — Matrizes original | A = [[1,2,3],[4,5,6]]; B = [[7,8],[9,10],[11,12]] | C = [[58,64],[139,154]] | [[58,64],[139,154]] | `resultados/imagens/programa3_on_memoria.jpg` |
 | 3 — Matrizes otimizado | Mesmas matrizes da versão original | C = [[58,64],[139,154]] | [[58,64],[139,154]], com forwarding OFF e ON e Branch Delay Slot OFF | `resultados/imagens/programa3_otimizado_OFF_memoria.png` e transcrição da memória ON |
 
-No Programa 3, a matriz C está armazenada por linhas em quatro posições consecutivas a partir do endereço `0x60`. Os valores observados em hexadecimal foram `3A`, `40`, `8B` e `9A`, correspondentes a **58, 64, 139 e 154** em decimal. A confirmação da memória da versão otimizada com forwarding ON foi informada a partir da leitura do painel Memory; recomenda-se guardar também a captura correspondente. As capturas disponíveis não constituem uma prova de correção para todas as entradas possíveis: documentam os casos de teste exigidos pelo enunciado.
+No Programa 3, C ocupa quatro palavras consecutivas a partir de 0x60: 3A, 40, 8B e 9A, equivalentes a 58, 64, 139 e 154. A nova execução otimizada ON confirmou esses valores no painel Memory; a captura completa está na seção 12.4. As capturas anteriores e as entradas de teste foram preservadas.
 
 A validação funcional permite prosseguir para a análise de desempenho sem comparar saídas distintas. Para reproduzir as medições, manteve-se `Branch Delay Slot OFF`, alternando somente `Forwarding OFF/ON` entre as execuções correspondentes.
 
@@ -767,11 +769,9 @@ As mudanças são, portanto, uma combinação de **reorganização de instruçõ
 
 Nas quatro execuções comparadas (original OFF/ON e otimizada OFF/ON), a matriz resultado foi:
 
-\[
-C=\begin{bmatrix}58 & 64\\139 & 154\end{bmatrix}
-\]
+`C = [[58, 64], [139, 154]]`
 
-O resultado é verificável no painel **Memory**, no endereço inicial `0x60`, pelas quatro palavras de 64 bits que contêm os valores hexadecimais `3A`, `40`, `8B` e `9A`, equivalentes a 58, 64, 139 e 154 em decimal. A versão otimizada com forwarding OFF teve a memória fotografada; com forwarding ON, a sequência completa foi conferida no painel e transcrita, porém **a captura de Memory ON ainda deve ser arquivada** se o grupo desejar evidência visual separada dessa configuração.
+O resultado é verificável no painel Memory em 0x60, 0x68, 0x70 e 0x78: 3A, 40, 8B e 9A. A captura otimizada OFF anterior foi preservada; a nova captura real otimizada ON, na seção 12.4, mostra toda a região C e o Stats da mesma execução.
 
 A equivalência foi verificada para a **entrada de teste utilizada**, não para todas as dimensões ou valores possíveis. Tanto a versão original quanto a otimizada usam dimensões fixas 2×3 e 3×2.
 
@@ -782,6 +782,14 @@ A equivalência foi verificada para a **entrada de teste utilizada**, não para 
 ![Memória da versão otimizada com forwarding OFF](resultados/imagens/programa3_otimizado_OFF_memoria.png)
 
 *Figura 10.2 — Resultado idêntico na versão otimizada.*
+
+### 10.3.1 Consolidação das evidências disponíveis (Web)
+
+![Painel de validação cruzada, com captura real da memória otimizada OFF, Stats otimizada ON e tabela de valores esperados; não é uma captura ON da região C](resultados/imagens/validacao_cruzada_programa3_evidencia_composta.png)
+
+**Leitura correta da figura:** a captura do lado esquerdo é a **execução otimizada OFF** e mostra `C=(0x3A, 0x40, 0x8B, 0x9A)` nos endereços `0x60..0x78`. A captura superior à direita é o **Stats da execução otimizada ON**, com 151 instruções, 172 ciclos e 6 stalls RAW. A tabela inferior à direita é uma **transcrição validada da saída esperada**, e **não um print do painel Memory ON**. A imagem incompleta da memória ON original permanece preservada no repositório.
+
+O painel composto acima é um registro histórico. A pendência visual ON foi resolvida pela nova captura real da seção 12.4, com todos os elementos de C e os contadores Stats da mesma execução.
 
 ## 10.4 Comparação quantitativa
 
@@ -804,13 +812,9 @@ A redução no número de instruções executadas, comum às duas configuraçõe
 
 O ganho de desempenho é calculado em ciclos, assumindo o mesmo período de clock em cada comparação:
 
-\[
-\mathrm{Speedup}_{OFF}=\frac{CC_{original,OFF}}{CC_{otimizada,OFF}}=\frac{540}{214}\approx\mathbf{2{,}52}\times
-\]
+`Speedup_OFF = 540 / 214 ≈ 2,52×`
 
-\[
-\mathrm{Speedup}_{ON}=\frac{CC_{original,ON}}{CC_{otimizada,ON}}=\frac{262}{172}\approx\mathbf{1{,}52}\times
-\]
+`Speedup_ON = 262 / 172 ≈ 1,52×`
 
 | Configuração | Ciclos original → otimizada | Redução de CC | RAW stalls original → otimizada | Redução de RAW | Speedup |
 |---|---|---:|---|---:|---:|
@@ -827,9 +831,7 @@ A versão original possui uma cadeia maior de operações de cálculo de endere�
 
 Dentro das condições deste experimento, a comparação dos ciclos também é consistente com a seguinte decomposição do modelo de cinco estágios apresentado na seção 3:
 
-\[
-CC = (IC+4) + RAW\;stalls + P_{controle,\,liquida}
-\]
+`CC = (IC + 4) + stalls RAW + penalidade líquida de controle`
 
 | Execução | Cálculo do resíduo de controle | Resíduo inferido |
 |---|---|---:|
@@ -846,7 +848,7 @@ Essa decomposição ajuda a explicar os ganhos de forma concreta. Com forwarding
 
 O Programa 3 otimizado preservou a saída C = [[58,64],[139,154]] para a entrada testada e reduziu o custo de execução em ambas as configurações. A otimização explorou duas oportunidades complementares: **reduzir trabalho redundante** (sobretudo cálculos de endereços) e **preencher intervalos de dependência com trabalho útil** (incrementos de ponteiros e do índice `k`). Isso reduziu o número de instruções de 217 para 151, diminuiu os stalls RAW e produziu **speedup de 2,52× com forwarding OFF e 1,52× com forwarding ON**, sem modificar o problema matemático.
 
-Com isso, a etapa de otimização da seção 10 está concluída para o caso de teste medido. A análise consolidada de outros programas e a experimentação com tamanhos de entrada diferentes serão desenvolvidas nas seções 11 e 12. A integração e a discussão final dos resultados ficarão nas seções 13 e 14.
+Com isso, a etapa de otimização da seção 10 está concluída para o caso de teste medido. A análise consolidada aparece na seção 11; a seção 12 distingue medições existentes de previsões para outras entradas; e as seções 13 e 14 apresentam a discussão e a reprodução.
 
 **Evidências da comparação:**
 
@@ -854,3 +856,175 @@ Com isso, a etapa de otimização da seção 10 está concluída para o caso de 
 - Original ON: ![Stats original ON](resultados/imagens/programa3_original_ON_stats.png)
 - Otimizada OFF: ![Stats otimizada OFF](resultados/imagens/programa3_otimizado_OFF_stats.png)
 - Otimizada ON: ![Stats otimizada ON](resultados/imagens/programa3_otimizado_ON_stats.png)
+
+
+# 11. Análise quantitativa de desempenho
+
+As métricas a seguir são as capturas realizadas no EduMIPS64 Web e registradas nas seções 4–10, consolidadas no arquivo [`resumo_desempenho_secao11.csv`](resultados/tabelas/resumo_desempenho_secao11.csv). Adotamos **IC = instruções dinâmicas executadas**, incluindo `SYSCALL 0`; **CC = ciclos de relógio da simulação**; **CPI = CC/IC**. O tempo real de execução do navegador não é utilizado. O **speedup**, quando comparados códigos com mesmo período de clock, é `CC_referência/CC_comparada`.
+
+**Atenção à terminologia:** o painel Stats das capturas mostra stalls RAW, WAW e estruturais, mas **não exibe branch stalls como coluna independente**. Nas tabelas, branch stalls **medidos** são `N/D`. Um número obtido por `CC − (IC + 4) − RAW`, sob as hipóteses de pipeline de cinco estágios sem outras penalidades, é rotulado separadamente como **resíduo líquido de controle inferido**, não como leitura direta do simulador. Isso evita inventar uma métrica.
+
+## 11.1 Microexperimentos: medições existentes
+
+| Experimento | Forwarding | IC | CC | Data stalls (RAW) | Branch stalls (painel) | Resíduo de controle inferido | CPI |
+|---|---|---:|---:|---:|---|---:|---:|
+| 4.1 Pipeline ideal | OFF | 5 | 9 | 0 | N/D | 0 | 1,80 |
+| 4.1 Pipeline ideal | ON | 5 | 9 | 0 | N/D | 0 | 1,80 |
+| 4.2 RAW | OFF | 5 | 15 | 6 | N/D | 0 | 3,00 |
+| 4.2 RAW | ON | 5 | 9 | 0 | N/D | 0 | 1,80 |
+| 4.3 Load-use original | OFF | 4 | 12 | 4 | N/D | 0 | 3,00 |
+| 4.3 Load-use original | ON | 4 | 9 | 1 | N/D | 0 | 2,25 |
+| 4.3 Load-use reordenado | OFF | 5 | 12 | 3 | N/D | 0 | 2,40 |
+| 4.3 Load-use reordenado | ON | 5 | 9 | 0 | N/D | 0 | 1,80 |
+| 4.4 Desvio | OFF | 33 | 68 | 22 | N/D | 9 | 2,06 |
+| 4.4 Desvio | ON | 33 | 56 | 10 | N/D | 9 | 1,70 |
+
+O experimento sem dependências não apresentou diferença entre OFF e ON (9 ciclos). No experimento de cadeia RAW, o forwarding reduziu os stalls de 6 para 0 e o CC de 15 para 9 (speedup **1,67×**). O caso load-use original caiu de 12 para 9 ciclos com forwarding (**1,33×**), mas conservou **1 stall RAW** mesmo com ON; com instrução independente, os 9 ciclos de ON permaneceram iguais, pois entrou uma instrução adicional no lugar da bolha. No desvio, o forwarding reduziu RAW de 22 para 10, mas o resíduo de controle ficou em 9 ciclos: o ganho foi **1,21×** (68/56).
+
+## 11.2 Programas principais: medições existentes
+
+| Programa | Versão | Forwarding | IC | CC | Data stalls (RAW) | Branch stalls (painel) | Controle inferido | CPI |
+|---|---|---|---:|---:|---:|---|---:|---:|
+| P1 Soma de vetores | Original | OFF | 52 | 94 | 34 | N/D | 4 | 1,81 |
+| P1 Soma de vetores | Original | ON | 52 | 72 | 12 | N/D | 4 | 1,38 |
+| P2 Contagem | Original | OFF | 43 | 85 | 30 | N/D | 8 | 1,98 |
+| P2 Contagem | Original | ON | 43 | 73 | 18 | N/D | 8 | 1,70 |
+| P3 Matrizes | Original | OFF | 217 | 540 | 308 | N/D | 11 | 2,49 |
+| P3 Matrizes | Original | ON | 217 | 262 | 30 | N/D | 11 | 1,21 |
+| P3 Matrizes | Otimizada | OFF | 151 | 214 | 48 | N/D | 11 | 1,42 |
+| P3 Matrizes | Otimizada | ON | 151 | 172 | 6 | N/D | 11 | 1,14 |
+
+Nas capturas, as contagens de WAW e structural stalls foram zero em todas as execuções acima. O resíduo inferido foi calculado como `CC − IC − 4 − RAW`: 4 no Programa 1, 8 no Programa 2 e 11 no Programa 3. Os resultados são consistentes com o custo líquido do controle nesses testes; **não** demonstram que o simulador tenha medido exatamente esse número de branch stalls. Não é correto somar automaticamente esse resíduo a uma futura coluna de branch stalls medida sem verificar as definições.
+
+## 11.3 Comparações, speedups e interpretação
+
+| Comparação | CC referência → CC nova | Redução de CC | RAW referência → RAW nova | Speedup |
+|---|---|---:|---|---:|
+| P1: OFF → ON | 94 → 72 | 23,40% | 34 → 12 | 1,31× |
+| P2: OFF → ON | 85 → 73 | 14,12% | 30 → 18 | 1,16× |
+| P3 original: OFF → ON | 540 → 262 | 51,48% | 308 → 30 | 2,06× |
+| P3 otimizada: OFF → ON | 214 → 172 | 19,63% | 48 → 6 | 1,24× |
+| P3 com OFF: original → otimizada | 540 → 214 | 60,37% | 308 → 48 | 2,52× |
+| P3 com ON: original → otimizada | 262 → 172 | 34,35% | 30 → 6 | 1,52× |
+| P3 original OFF → otimizada ON (mudam dois fatores) | 540 → 172 | 68,15% | 308 → 6 | 3,14× |
+
+O maior ganho isolado por **forwarding** ocorreu no Programa 3 original (540/262 ≈ **2,06×**). A otimização do Programa 3 reduziu IC de 217 para 151 e, em forwarding OFF, diminuiu RAW de 308 para 48. A versão otimizada com forwarding ON foi a execução mais rápida desse programa, com 172 ciclos; sua comparação com a original OFF (**3,14×**) é uma combinação de **otimização de código e mudança de hardware simulado**, e não deve ser atribuída só a uma delas.
+
+Para qualquer comparação de versões que altera IC, **não** se deve calcular o speedup apenas pela divisão dos CPIs; usa-se o número de ciclos. Em todos os pares acima, presumimos período de clock idêntico, sem inferir frequência nem tempo real.
+
+# 12. Experimento com diferentes tamanhos de entrada
+
+O Programa 1 soma vetores de N = 5, 10, 20 e 50 elementos de 64 bits, com A[i] = i+1 e B[i] = 10(i+1). O resultado esperado é C[i] = 11(i+1).
+
+### 12.1 Procedimento e configuração
+
+Os arquivos programa1_n10.s, programa1_n20.s e programa1_n50.s foram executados no https://web.edumips.org/ com forwarding OFF e ON, usando Load e Run All até STOPPED. As seis medições abaixo foram lidas do Stats real, não calculadas por um interpretador. N=5 preserva as medições anteriores.
+
+Build observado em Help > About: **1.4.0-223-gce45a8d9**, production. Coleta desta revisão: 23/10/2026. Mantiveram-se Branch Delay Slot OFF; caches L1 de instruções e dados: 1024 bytes, bloco 16 bytes e associatividade 1. A única opção de simulação alternada foi CPU Forwarding. O identificador do build das capturas anteriores continua desconhecido.
+
+### 12.2 Medições reais
+
+| N | Forwarding | IC | CC | RAW | WAW | Estruturais | CPI |
+|---:|---|---:|---:|---:|---:|---:|---:|
+| 5 | OFF | 52 | 94 | 34 | 0 | 0 | 1.81 |
+| 5 | ON | 52 | 72 | 12 | 0 | 0 | 1.38 |
+| 10 | OFF | 97 | 174 | 64 | 0 | 0 | 1.79 |
+| 10 | ON | 97 | 132 | 22 | 0 | 0 | 1.36 |
+| 20 | OFF | 187 | 334 | 124 | 0 | 0 | 1.79 |
+| 20 | ON | 187 | 252 | 42 | 0 | 0 | 1.35 |
+| 50 | OFF | 457 | 814 | 304 | 0 | 0 | 1.78 |
+| 50 | ON | 457 | 612 | 102 | 0 | 0 | 1.34 |
+
+CPI = CC/IC, arredondado a duas casas. Branch stalls: N/D; o painel não exibe contador separado. Os dados e a proveniência estão em resultados/tabelas/medicoes_tamanho_secao12.csv. As seis capturas integrais estão em resultados/imagens/n10_OFF.jpg, n10_ON.jpg, n20_OFF.jpg, n20_ON.jpg, n50_OFF.jpg e n50_ON.jpg.
+
+### 12.3 Análise de escala
+
+As contagens observadas confirmam IC = 7 + 9N: seis instruções iniciais, nove por iteração e SYSCALL 0. As seis medições coincidiram com as projeções anteriores, preservadas em projecoes_tamanho_secao12.csv para comparação histórica.
+
+Na série medida, CC_OFF = 14 + 16N e RAW_OFF = 4 + 6N; CC_ON = 12 + 12N e RAW_ON = 2 + 2N. O forwarding reduziu ciclos em 24,1% (N=10), 24,6% (N=20) e 24,8% (N=50); os speedups foram 1,318, 1,325 e 1,330. IC permaneceu igual entre OFF e ON.
+
+O CPI OFF variou de 1,79 a 1,78, enquanto ON caiu de 1,36 a 1,34. O custo fixo perde importância e o crescimento observado é linear. Isso é compatível com limites de 16/9 e 12/9 para este modelo, sem provar o comportamento de qualquer entrada maior.
+
+O resíduo CC - IC - 4 - RAW foi 9, 19 e 49 para N=10,20,50, respectivamente. É uma inferência compatível com N-1 desvios tomados, não uma medida de branch stalls. Para N=50, os três vetores ocupam 1200 bytes; o Stats mostrou 51 misses em 101 leituras e 25 misses em 50 escritas de dados, em ambos os estados. Ainda assim, os ciclos coincidiram com a projeção: não se atribui uma penalidade adicional de ciclos a esses misses sem evidência.
+
+### 12.4 Evidência complementar: Programa 3 otimizado ON
+
+O arquivo programa3_matrizes_otimizado.s foi executado com Forwarding ON e Branch Delay Slot OFF, nas mesmas opções de cache. O Stats registrou 172 ciclos, 151 instruções, 6 stalls RAW, zero WAW e zero estruturais (CPI 1,14), reproduzindo os dados anteriores.
+
+| Endereço | Valor hexadecimal de 64 bits | Decimal |
+|---|---|---:|
+| 0x60 | 000000000000003A | 58 |
+| 0x68 | 0000000000000040 | 64 |
+| 0x70 | 000000000000008B | 139 |
+| 0x78 | 000000000000009A | 154 |
+
+![Captura real do Programa 3 otimizado ON: Stats e região C](resultados/imagens/programa3_ON_memoria_completa.jpg)
+
+A captura mostra a saída C = [[58,64],[139,154]] na mesma execução ON. Ela resolve a pendência da captura antiga, que terminava antes da região C. A imagem composta anterior permanece apenas como registro histórico. A validação é para a entrada testada, não uma prova para todas as entradas.
+
+# 13. Discussão dos resultados
+
+As respostas preservam os resultados medidos das seções 4–11. A seção 12 acrescenta seis medições reais para N=10,20,50 e a captura completa da memória otimizada ON.
+
+**1. Qual foi o impacto do forwarding no total de ciclos?** O forwarding eliminou ou reduziu esperas por resultados de instruções anteriores: no Programa 1, **94→72** ciclos (−23,4%); no Programa 2, **85→73** (−14,1%); e no Programa 3 original, **540→262** (−51,5%). Na versão otimizada do Programa 3, **214→172** (−19,6%). O experimento ideal foi 9→9 porque não havia dependências a resolver.
+
+**2. Qual foi o impacto sobre o CPI?** Nos mesmos programas, o IC não mudou ao alternar forwarding, então o CPI acompanhou a redução de CC. No Programa 1, **1,81→1,38**; no Programa 2, **1,98→1,70**; no Programa 3 original, **2,49→1,21**; e no otimizado, **1,42→1,14**.
+
+**3. Quais dependências tiveram a penalidade reduzida?** Na cadeia de somas DADDI→DADD do experimento 4.2, os seis stalls RAW desapareceram. Nos programas, o encaminhamento mitigou RAW entre cálculos de endereço, operações aritméticas, loads e seus consumidores, além de atualizações de índices. Não alterou a necessidade lógica de consumir os resultados; apenas antecipa sua disponibilidade no pipeline.
+
+**4. Por que ainda há stalls com forwarding?** Um `LD` só disponibiliza o dado após o acesso em MEM e o consumidor imediatamente seguinte pode precisar do operando antes disso. No experimento 4.3 original, permaneceu **1 stall** com ON. Nos programas, a versão otimizada do Programa 3 ainda teve **6 RAW stalls** com ON, envolvendo outras dependências, inclusive condições de laço e situações que não são resolvidas por todos os caminhos de forwarding.
+
+**5. Impacto dos desvios condicionais?** Os branches alteram o fluxo de busca e podem desperdiçar ciclos ao redirecionar o pipeline. O experimento 4.4 fez 10 testes, 9 tomados, e apresentou um **resíduo líquido de controle de 9 ciclos** em ambas as configurações. Em nossos programas os resíduos modelados são 4 (soma), 8 (contagem) e 11 (matrizes). Como o Stats não mostrou contador próprio de branch stalls, os valores são inferências compatíveis com os fluxos, não medições diretas.
+
+**6. Onde havia instruções independentes?** No Programa 3 otimizado, os incrementos dos ponteiros `R7` e `R8` independem dos valores `R9` e `R10` carregados pelos loads, desde que ocorram depois deles para preservar os endereços lidos. O incremento de `R6` é independente do resultado da multiplicação, podendo ficar entre `DMUL` e a `DADD` consumidora. No experimento 4.3, o `DADDI R5` independente pôde ocupar a bolha do load-use.
+
+**7. A reordenação reduziu stalls?** Sim. Na comparação do Programa 3 original→otimizado, os RAW stalls caíram de **308→48** com OFF (−84,4%) e de **30→6** com ON (−80,0%). A redução resulta da reordenação útil e também da substituição de recálculos por ponteiros, não apenas da troca de ordem de linhas.
+
+**8. A otimização alterou o IC?** Sim. As instruções dinâmicas do Programa 3 caíram de **217 para 151** (−30,4%), porque o laço interno passou a gastar menos operações por produto. O problema, as dimensões e a saída permaneceram iguais no teste documentado.
+
+**9. Qual foi o speedup observado?** Original→otimizado do Programa 3: `540/214 ≈ 2,52×` com forwarding OFF e `262/172 ≈ 1,52×` com ON. Se combinarmos as duas mudanças, de original OFF para otimizado ON, `540/172 ≈ 3,14×`, sem atribuir o ganho combinado a uma única intervenção.
+
+**10. Reduzir CPI garante redução proporcional do tempo?** Não. O número total de ciclos é `IC × CPI`, e o tempo estimado também depende do período de clock. No experimento 4.3, a reordenação com ON reduziu o CPI de **2,25 para 1,80** mas o total ficou **9 ciclos nas duas versões**, pois IC aumentou de 4 para 5. Nas versões do Programa 3 o IC mudou muito, portanto calculamos speedup pelos ciclos, não somente pelo CPI.
+
+**11. Quais mudanças mais impactaram o desempenho e por quê?** O maior resultado combinado veio de **eliminar operações redundantes dentro do laço do Programa 3** e **usar forwarding onde havia dependências longas**. A reorganização reduziu a quantidade de instruções em 66 e encurtou cadeias RAW; com OFF, os 326 ciclos economizados correspondem exatamente a **66 instruções + 260 RAW stalls** a menos, mantendo o mesmo resíduo de controle inferido. O forwarding no código original reduziu 278 stalls RAW e, correspondentemente, 278 ciclos (**540→262**), enquanto no código já otimizado reduziu 42. Essas comparações mostram que reduzir trabalho redundante e aproveitar ILP são complementares.
+
+# 14. Guia de reprodução do experimento
+
+A experiência foi conduzida no EduMIPS64 Web, https://web.edumips.org/. O build das capturas anteriores não foi registrado. Nesta revisão, Help > About identificou **1.4.0-223-gce45a8d9**, production, para as seis novas medições e a memória otimizada ON (23/10/2026). A versão Java/CLI não foi usada nesta coleta.
+
+**Configuração registrada (ver seção 3.2):** Forwarding OFF e ON em corridas separadas; Branch Delay Slot OFF; cache L1 de instruções 1024 bytes, blocos de 16 bytes, associatividade 1; cache L1 de dados com os mesmos parâmetros. Outras configurações devem permanecer iguais entre os pares.
+
+**Procedimento:**
+
+1. Acessar o EduMIPS64 Web e abrir o arquivo `.s` correspondente pelo menu Program > Open (ou colar no editor).
+2. Acessar o botão de **engrenagem > General Settings**; desativar **Branch Delay Slot** e definir **CPU Forwarding OFF**. Revisar os parâmetros de cache acima.
+3. Clicar em **Load**, conferindo ausência de erro do montador. Para o estudo ciclo a ciclo, acionar **Single Step** e inspecionar os estágios do **Pipeline** e o histórico de **Cycles**; para execução integral, clicar em **Run All**.
+4. Ao terminar, usar **Stats** para registrar ciclos totais (CC), instruções dinâmicas (IC), stalls RAW, WAW e estruturais; calcular CPI = CC/IC. Não confundir contadores de hits/misses de cache com stalls de pipeline. Se o contador específico de branch stalls não existir, preencher **N/D**.
+5. Conferir **Memory** (ou **Registers**, no microexperimento sem saída em memória) contra a tabela de saídas; salvar capturas com nome do arquivo, forwarding e dimensão de entrada.
+6. Recarregar o mesmo `.s` após alternar **CPU Forwarding ON**, mantendo as entradas e outras opções, repetir Step/Run All, conferir memória e coletar Stats.
+7. Para reproduzir a seção 10, executar `programa3_matrizes_original.s` e `programa3_matrizes_otimizado.s` com ambas as configurações. Para a seção 12, executar N=5, 10, 20 e 50, conforme o procedimento do item 12.1.
+8. Consolidar os resultados no CSV de medição e atualizar as tabelas do relatório **somente depois das simulações**, identificando diferenças entre observado e projetado.
+
+**Entradas e saídas de referência:**
+
+| Arquivo | Entrada | Saída esperada |
+|---|---|---|
+| `programas/programa1_soma_vetores.s` | `A=[1,2,3,4,5]`, `B=[10,20,30,40,50]`, N=5 | `C=[11,22,33,44,55]` |
+| `programas/programa2_contagem.s` | vetor `[4,7,4,2,4,9]`, alvo=4, N=6 | resultado=3 |
+| `programas/programa3_matrizes_original.s` e `_otimizado.s` | A 2×3 e B 3×2 da seção 5.3 | `C=[[58,64],[139,154]]` |
+| `experimentos_tamanho/programa1_n05.s`, `_n10.s`, `_n20.s`, `_n50.s` | `A[i]=i+1`, `B[i]=10(i+1)` | `C[i]=11(i+1)` |
+
+Nos microexperimentos, os valores de referência são: 4.1 `R1..R4=(10,20,30,40)`; 4.2 `R1..R4=10`; 4.3 `R3=7` (na variante com `DADDI`, `R5=100`); 4.4 `R1=0, R2=10`.
+
+**Validação adicional local:** com Python 3, na raiz do repositório, executar `python3 scripts/validar_funcional.py`. O script confirma os valores na memória e a contagem de instruções dinâmicas para as oito entradas testadas, mas não substitui a execução no EduMIPS64 para obter ciclos e stalls.
+
+# 15. Arquivos da entrega e evidências
+
+A entrega inclui os códigos originais, relatório atualizado, tabelas de medições reais, seis capturas de Stats de N=10/20/50 e a captura completa da matriz otimizada ON. Os cinco integrantes e os resultados anteriores foram preservados. As pendências desta revisão foram concluídas; o build da nova coleta foi 1.4.0-223-gce45a8d9.
+
+## Fontes de consulta
+
+- Enunciado do professor: [`enunciado/TP1_EduMIPS64.pdf`](enunciado/TP1_EduMIPS64.pdf).
+- Documentação oficial do EduMIPS64: <https://edumips64.readthedocs.io/en/latest/> (formato de fontes, ISA e opções de interface).
+- Simulador Web: <https://web.edumips.org/>.
+

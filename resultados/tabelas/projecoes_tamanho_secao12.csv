@@ -1,0 +1,9 @@
+N,Forwarding,IC_contado_por_interpretador,CC_projetado_nao_medido,RAW_projetados_nao_medidos,branch_stalls_painel,controle_liquido_projetado,CPI_projetado,saida_esperada
+5,OFF,52,94,34,N/D,4,1.807692,"C[i]=11*(i+1), i=0..4"
+5,ON,52,72,12,N/D,4,1.384615,"C[i]=11*(i+1), i=0..4"
+10,OFF,97,174,64,N/D,9,1.793814,"C[i]=11*(i+1), i=0..9"
+10,ON,97,132,22,N/D,9,1.360825,"C[i]=11*(i+1), i=0..9"
+20,OFF,187,334,124,N/D,19,1.786096,"C[i]=11*(i+1), i=0..19"
+20,ON,187,252,42,N/D,19,1.347594,"C[i]=11*(i+1), i=0..19"
+50,OFF,457,814,304,N/D,49,1.781182,"C[i]=11*(i+1), i=0..49"
+50,ON,457,612,102,N/D,49,1.339168,"C[i]=11*(i+1), i=0..49"
